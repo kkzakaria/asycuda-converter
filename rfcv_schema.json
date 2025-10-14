@@ -1,0 +1,172 @@
+{
+  "schema_version": "1.0",
+  "document_type": "RFCV - Rapport Final de Classification et de Valeur",
+  "issuing_authority": "République de Côte d'Ivoire - Service de Classification et d'Analyse de la Valeur (DGD-DARRV)",
+  
+  "rfcv_structure": {
+    "document_metadata": {
+      "numero_rfcv": "string",
+      "date_rfcv": "date (DD/MM/YYYY)",
+      "code_importateur": "string",
+      "numero_fdi_dai": "string",
+      "date_fdi_dai": "date (DD/MM/YYYY)",
+      "mode_livraison": "string (ex: TOT)",
+      "numero_document_reference": "string"
+    },
+    
+    "parties": {
+      "importateur": {
+        "nom": "string",
+        "adresse": "string",
+        "ville": "string",
+        "code": "string"
+      },
+      "exportateur": {
+        "nom": "string",
+        "adresse": "string",
+        "pays": "string"
+      }
+    },
+    
+    "origine_et_paiement": {
+      "pays_provenance": "string",
+      "mode_paiement": "string"
+    },
+    
+    "transport": {
+      "mode_transport": "string",
+      "numero_connaissement": "string",
+      "date_connaissement": "date",
+      "numero_lcl": "integer",
+      "numero_fcl": "integer",
+      "numero_vol_voyage": "string",
+      "transporteur_id": "string",
+      "lieu_chargement": "string (code port)",
+      "lieu_transbordement": "string (optionnel)",
+      "lieu_dechargement": "string (code port)"
+    },
+    
+    "conteneurs": [
+      {
+        "numero": "integer",
+        "numero_conteneur": "string",
+        "type": "string",
+        "taille": "string",
+        "numero_scelle": "string"
+      }
+    ],
+    
+    "informations_financieres": {
+      "numero_facture": "string",
+      "date_facture": "date",
+      "incoterm": "string (ex: CFR, FOB)",
+      "devise": {
+        "code": "string (ex: USD)",
+        "taux_change": "decimal"
+      },
+      "valeurs": {
+        "total_facture": "decimal",
+        "total_fob_atteste": "decimal",
+        "fret_atteste": "decimal",
+        "assurance_attestee": "decimal",
+        "charges_attestees": "decimal",
+        "valeur_cif_attestee": "decimal"
+      }
+    },
+    
+    "poids": {
+      "poids_total_net_kg": "decimal",
+      "poids_total_brut_kg": "decimal"
+    },
+    
+    "colisage": {
+      "nombre_total": "integer",
+      "unite": "string (ex: CARTONS, PACKAGES)",
+      "description": "string"
+    },
+    
+    "articles": [
+      {
+        "numero_article": "integer",
+        "quantite": "decimal",
+        "unite_mesure": "string (ex: PC, KG, U, PR)",
+        "utilise": "string (U/N)",
+        "pays_origine": "string (code pays)",
+        "description_marchandises": "string",
+        "code_sh_atteste": "string (format: XXXX.XX.XX.XX)",
+        "valeur_fob_attestee_devise_transaction": "decimal",
+        "valeur_taxable_devise_transaction": "decimal"
+      }
+    ],
+    
+    "totaux": {
+      "total_general_fob": "decimal",
+      "total_general_taxable": "decimal"
+    },
+    
+    "remarques": "string (optionnel)",
+    
+    "numero_reference_document": "string"
+  },
+  
+  "exemples_categories_marchandises": {
+    "pieces_motos": {
+      "code_sh_commun": "8714.10.90.00",
+      "exemples": [
+        "MOTORCYCLE CHAIN",
+        "MOTORCYCLE STEERING WHEEL",
+        "MOTORCYCLE CARBURETOR",
+        "MOTORCYCLE TURN SIGNAL",
+        "MOTORCYCLE CRANKSHAFT",
+        "MOTORCYCLE TANK",
+        "MOTORCYCLE SHOCK ABSORBER",
+        "MOTORCYCLE BEARING",
+        "MOTORCYCLE VALVE",
+        "MOTORCYCLE REAR MIRROR",
+        "MOTORCYCLE HEAD LIGHT",
+        "MOTORCYCLE CYLINDER",
+        "MOTORCYCLE PISTON"
+      ]
+    },
+    "chaussures": {
+      "code_sh": "6402.99.20.00",
+      "exemples": [
+        "WOMEN SHOES (SLIPPERS)"
+      ]
+    },
+    "plastique": {
+      "code_sh": "3901.10.00.00",
+      "exemples": [
+        "POLYETHYLENE (RECYCLED HDPE)"
+      ]
+    },
+    "tricycles": {
+      "code_sh": "8704.31.19.90",
+      "exemples": [
+        "TRICYCLE AP150ZH-175"
+      ]
+    }
+  },
+  
+  "notes_importantes": [
+    "Ce document ne libère pas les acheteurs et/ou vendeurs de leurs obligations contractuelles",
+    "Les importateurs et leurs agents doivent faire une déclaration en détail auprès des Autorités Douanières Ivoiriennes",
+    "Pour toute information ou demande de modification: darrv.petition@douanes.ci",
+    "Les valeurs sont attestées par le service DGD-DARRV",
+    "Le taux de change est fixé par les autorités pour la conversion en devise locale"
+  ],
+  
+  "codes_ports_frequents": {
+    "CIABJ": "Abidjan, Côte d'Ivoire",
+    "CNHUA": "Huangpu, Chine",
+    "CNNBO": "Ningbo, Chine",
+    "CNNSA": "Ningbo/Shanghai, Chine",
+    "CNTAO": "Qingdao, Chine"
+  },
+  
+  "incoterms_utilises": {
+    "CFR": "Cost and Freight",
+    "FOB": "Free On Board",
+    "CIF": "Cost, Insurance and Freight"
+  }
+}
