@@ -1,6 +1,5 @@
 import type { Mistral } from "@mistralai/mistralai";
 import { getMistralClient, defaultMistralConfig } from "@/lib/config/mistral.config";
-import { uploadFileForOCR } from "@/lib/services/mistral-file-upload.service";
 import { rfcvSchema } from "@/lib/schemas/rfcv.schema";
 import type {
   RFCVExtractionResult,
@@ -180,20 +179,41 @@ export async function extractRFCVFromPDF(
   const mistralClient = client ?? getMistralClient();
 
   try {
-    // 1. Upload du fichier
-    const uploadedFile = await uploadFileForOCR(
-      pdfBuffer,
-      fileName,
-      mistralClient
-    );
+    // 1. Convertir le PDF en base64
+    const base64PDF = pdfBuffer.toString("base64");
+    const dataUrl = `data:application/pdf;base64,${base64PDF}`;
 
-    // 2. Appel à Mistral OCR avec le schéma Zod
+    // 2. Appel à Mistral OCR pour extraire le texte
+    const ocrResponse = await mistralClient.ocr.process({
+      model: "mistral-ocr-latest",
+      document: {
+        type: "document_url",
+        documentUrl: dataUrl,
+      },
+      includeImageBase64: false, // Pas besoin des images, juste les données
+    });
+
+    // 3. Extraction du texte markdown de toutes les pages
+    const ocrMarkdown = ocrResponse.pages
+      .map((page) => page.markdown)
+      .join("\n\n");
+
+    if (!ocrMarkdown || ocrMarkdown.trim().length === 0) {
+      return {
+        success: false,
+        error: {
+          type: "PARSING_ERROR",
+          message: "Aucun texte extrait du document PDF par l'OCR",
+        },
+      };
+    }
+
+    // 4. Utiliser Pixtral pour structurer les données selon notre schéma
+    // Approche hybride: OCR pour extraire le texte, puis chat pour structurer
     const extractionPrompt = buildExtractionPrompt();
 
-    const ocrResponse = await mistralClient.chat.complete({
-      model: options.timeoutMs
-        ? defaultMistralConfig.model
-        : defaultMistralConfig.model,
+    const structureResponse = await mistralClient.chat.complete({
+      model: defaultMistralConfig.model,
       messages: [
         {
           role: "system",
@@ -201,32 +221,22 @@ export async function extractRFCVFromPDF(
         },
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extraire les données RFCV de ce document selon le schéma fourni:",
-            },
-            {
-              type: "image_url",
-              imageUrl: `https://api.mistral.ai/v1/files/${uploadedFile.fileId}/content`,
-            },
-          ],
+          content: `Voici le texte extrait d'un document RFCV par OCR. Extrais les données selon le schéma JSON requis:\n\n${ocrMarkdown}`,
         },
       ],
       responseFormat: {
         type: "json_object",
       },
-      temperature: 0, // Déterministe pour extraction
+      temperature: 0,
     });
 
-    // 3. Extraction du JSON de la réponse
-    const content = ocrResponse.choices?.[0]?.message?.content;
+    const content = structureResponse.choices?.[0]?.message?.content;
     if (!content) {
       return {
         success: false,
         error: {
           type: "PARSING_ERROR",
-          message: "Aucune réponse reçue de Mistral OCR",
+          message: "Impossible de structurer les données extraites",
         },
       };
     }
@@ -241,7 +251,7 @@ export async function extractRFCVFromPDF(
         success: false,
         error: {
           type: "PARSING_ERROR",
-          message: "Impossible de parser la réponse JSON de Mistral OCR",
+          message: "Impossible de parser la réponse JSON",
           details: parseError,
         },
       };
