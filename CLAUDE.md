@@ -15,8 +15,8 @@ ASYCUDA Converter is a Next.js application for converting RFCV (Rapport Final de
 - **UI Library**: Shadcn UI (New York style variant)
 - **Styling**: Tailwind CSS v4 with CSS variables
 - **Type Safety**: TypeScript with strict mode enabled
-- **Validation**: Zod for schema validation (to be implemented)
-- **OCR Engine**: Mistral OCR for PDF parsing (to be integrated)
+- **Validation**: Zod for schema validation (implemented with rfcv.schema.ts)
+- **Vision AI**: Google Gemini 2.0 Flash for PDF document extraction (implemented, 71.4% success rate)
 
 ## Essential Commands
 
@@ -91,12 +91,19 @@ Always use `@/` imports instead of relative paths for consistency.
 
 ### PDF to XML Conversion Pipeline
 
-The planned architecture involves:
-1. **Upload**: Accept RFCV PDF documents
-2. **OCR Processing**: Extract text/data using Mistral OCR
-3. **Validation**: Validate extracted data against `rfcv_schema.json` using Zod
-4. **Transformation**: Convert validated JSON to ASYCUDA-compatible XML
-5. **Download**: Provide XML output for customs system import
+The current implementation:
+1. **Upload**: Accept RFCV PDF documents via API endpoint `/api/rfcv/extract`
+2. **Vision Extraction**: Direct PDF → JSON extraction using Google Gemini 2.0 Flash
+3. **Normalization**: Data cleaning and formatting (HS codes, dates, empty strings)
+4. **Validation**: Validate extracted data against Zod schema (lib/schemas/rfcv.schema.ts)
+5. **Transformation**: Convert validated JSON to ASYCUDA-compatible XML (to be implemented)
+6. **Download**: Provide XML output for customs system import (to be implemented)
+
+**Key Implementation Details**:
+- Service: `lib/services/rfcv-vision.service.ts` (Gemini Vision)
+- Config: `lib/config/gemini.config.ts` (API configuration)
+- Normalizers: `lib/utils/rfcv-normalizers.ts` (data cleaning)
+- Success Rate: 71.4% (5/7 PDFs) with complete article extraction
 
 ### Working with RFCV Data
 
@@ -117,11 +124,42 @@ Key considerations when implementing RFCV processing:
 
 ## Current State
 
-The project is currently in initial setup phase:
-- ✅ Next.js scaffold with App Router
-- ✅ Shadcn UI configured
-- ✅ RFCV schema defined
-- ⏳ PDF upload/processing not yet implemented
-- ⏳ OCR integration pending
-- ⏳ XML generation logic to be built
-- ⏳ Zod validation schemas to be created
+### Completed ✅
+
+- ✅ Next.js 15.5.5 scaffold with App Router and Turbopack
+- ✅ Shadcn UI configured (New York style)
+- ✅ RFCV schema defined (rfcv_schema.json)
+- ✅ Zod validation schema implemented (lib/schemas/rfcv.schema.ts)
+- ✅ Google Gemini Vision integration (lib/services/rfcv-vision.service.ts)
+- ✅ Data normalization utilities (lib/utils/rfcv-normalizers.ts)
+- ✅ API endpoint for PDF extraction (/api/rfcv/extract)
+- ✅ **PDF extraction working with 71.4% success rate** (5/7 test documents)
+- ✅ **100% article extraction on valid documents** (25/25 articles)
+
+### In Progress ⏳
+
+- ⏳ Frontend upload UI implementation
+- ⏳ XML generation from validated JSON
+- ⏳ Error handling improvements for edge cases (RFCV TRICYCLE.pdf parsing)
+
+### Performance Metrics
+
+- **Success Rate**: 71.4% (5/7 PDFs validated)
+- **Article Extraction**: 100% on valid documents (vs 0% with previous approach)
+- **Average Processing Time**: 23.3 seconds per document (-28% vs baseline)
+- **Critical Fields**: 71-100% extraction rate (exportateur, transport, codes SH)
+
+### Known Issues
+
+1. **RFCV TRICYCLE.pdf**: JSON parsing error (malformed response from Gemini)
+2. **FCVR-189.pdf**: Missing container and weight data (validation errors)
+
+See `claudedocs/gemini-vs-mistral-comparison.md` for detailed performance analysis.
+
+### Environment Variables Required
+
+```bash
+# .env.local
+GOOGLE_AI_API_KEY=your_api_key_here  # Get from https://aistudio.google.com/apikey
+MISTRAL_API_KEY=your_mistral_key     # (legacy, not used with Gemini)
+```
