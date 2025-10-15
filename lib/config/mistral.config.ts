@@ -20,7 +20,7 @@ export interface MistralConfig {
  * Configuration par défaut pour Mistral OCR
  */
 export const defaultMistralConfig: Omit<MistralConfig, "apiKey"> = {
-  model: "mistral-ocr-latest",
+  model: "pixtral-large-latest", // Modèle vision pour traiter les PDFs
   timeout: 120000, // 2 minutes
   maxRetries: 3,
 };
