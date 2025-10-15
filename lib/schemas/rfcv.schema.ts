@@ -125,7 +125,7 @@ export const valeursSchema = z.object({
  * Incoterms valides
  */
 export const incotermEnum = z.enum(["CFR", "FOB", "CIF"], {
-  errorMap: () => ({ message: "Incoterm doit être CFR, FOB ou CIF" }),
+  message: "Incoterm doit être CFR, FOB ou CIF",
 });
 
 /**
@@ -166,7 +166,7 @@ export const colisageSchema = z.object({
  * Utilisation article (Utilisé/Non utilisé)
  */
 export const utiliseEnum = z.enum(["U", "N"], {
-  errorMap: () => ({ message: "Utilise doit être 'U' (utilisé) ou 'N' (non utilisé)" }),
+  message: "Utilise doit être 'U' (utilisé) ou 'N' (non utilisé)",
 });
 
 /**
