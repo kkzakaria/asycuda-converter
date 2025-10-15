@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractRFCVFromPDF } from "@/lib/services/rfcv-ocr.service";
-import { MISTRAL_OCR_LIMITS } from "@/lib/config/mistral.config";
+import { extractRFCVWithVision } from "@/lib/services/rfcv-vision.service";
+import { GEMINI_LIMITS } from "@/lib/config/gemini.config";
 
 /**
- * API Route pour l'extraction OCR de documents RFCV
+ * API Route pour l'extraction par Vision AI de documents RFCV
  *
  * POST /api/rfcv/extract
  * Content-Type: multipart/form-data
  * Body: { file: File }
+ *
+ * Utilise Google Gemini Vision pour extraction directe PDF → JSON
  */
 
 export async function POST(request: NextRequest) {
@@ -58,13 +60,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Validation de la taille
-    if (file.size > MISTRAL_OCR_LIMITS.MAX_FILE_SIZE_BYTES) {
+    if (file.size > GEMINI_LIMITS.MAX_FILE_SIZE_BYTES) {
       return NextResponse.json(
         {
           success: false,
           error: {
             type: "FILE_ERROR",
-            message: `Fichier trop volumineux: ${(file.size / 1024 / 1024).toFixed(2)} MB. Limite: ${MISTRAL_OCR_LIMITS.MAX_FILE_SIZE_MB} MB.`,
+            message: `Fichier trop volumineux: ${(file.size / 1024 / 1024).toFixed(2)} MB. Limite: ${GEMINI_LIMITS.MAX_FILE_SIZE_MB} MB.`,
           },
         },
         { status: 400 }
@@ -75,8 +77,10 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 3. Appel au service d'extraction OCR
-    const result = await extractRFCVFromPDF(buffer, file.name);
+    // 3. Appel au service d'extraction Vision AI (Gemini)
+    const result = await extractRFCVWithVision(buffer, file.name, {
+      debug: process.env.NODE_ENV === "development",
+    });
 
     // 4. Retour du résultat
     if (result.success) {

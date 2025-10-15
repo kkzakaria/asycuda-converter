@@ -67,6 +67,12 @@ export interface RFCVOCROptions {
    * @default 120000 (2 minutes)
    */
   timeoutMs?: number;
+
+  /**
+   * Activer le mode debug avec logging détaillé
+   * @default false
+   */
+  debug?: boolean;
 }
 
 /**
