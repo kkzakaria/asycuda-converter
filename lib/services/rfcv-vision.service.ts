@@ -26,6 +26,27 @@ import { normalizeRFCVData } from "@/lib/utils/rfcv-normalizers";
  */
 
 /**
+ * Nettoie et sanitize une chaîne JSON avant parsing
+ *
+ * Supprime les wrappers markdown et caractères de contrôle invalides
+ * qui peuvent causer des erreurs de parsing.
+ *
+ * @param jsonStr - Chaîne JSON potentiellement malformée
+ * @returns Chaîne JSON nettoyée
+ */
+function sanitizeJSON(jsonStr: string): string {
+  return (
+    jsonStr
+      // Supprimer markdown code blocks
+      .replace(/^```json\s*/i, "")
+      .replace(/```\s*$/i, "")
+      // Supprimer caractères de contrôle invalides (U+0000 à U+001F, U+007F à U+009F)
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+      .trim()
+  );
+}
+
+/**
  * Construit le prompt d'extraction pour Gemini Vision
  *
  * Réutilise le prompt détaillé optimisé pour l'extraction RFCV
@@ -263,6 +284,17 @@ IMPORTANT:
 - Si un champ est invisible/illisible, mettre "" pour strings ou 0 pour nombres
 - VÉRIFIER que numero_reference_document est bien extrait (bas du document)
 - Retourner UNIQUEMENT le JSON, sans texte additionnel avant ou après
+
+CRITIQUE - VALIDITÉ JSON STRICTE:
+Assurez-vous que la réponse JSON est STRICTEMENT valide RFC 8259:
+- Échappez TOUS les guillemets doubles " avec \\"
+- Échappez TOUS les backslashes \\ avec \\\\
+- Échappez les retours à la ligne avec \\n
+- N'utilisez JAMAIS de guillemets simples ' dans les valeurs de chaînes
+- N'ajoutez JAMAIS de trailing commas après le dernier élément d'un array/objet
+- Pas de commentaires dans le JSON
+- Vérifiez mentalement la validité JSON avant de répondre
+- Le JSON doit être parsable par JSON.parse() sans erreur
 `;
 }
 
@@ -371,24 +403,82 @@ export async function extractRFCVWithVision(
       );
     }
 
-    // 5. Parser le JSON
+    // 5. Parser le JSON avec retry logic
     let extractedData: unknown;
-    try {
-      extractedData = JSON.parse(content);
-    } catch (parseError) {
-      if (process.env.NODE_ENV === "development" || options.debug) {
-        console.error(`❌ [GEMINI] Erreur parsing JSON:`, parseError);
-        console.error(`📄 [GEMINI] Contenu reçu:`, content.substring(0, 500));
-      }
+    let parseAttempts = 0;
+    const maxAttempts = 2;
+    let currentContent = content;
 
-      return {
-        success: false,
-        error: {
-          type: "PARSING_ERROR",
-          message: "Impossible de parser la réponse JSON de Gemini",
-          details: parseError,
-        },
-      };
+    while (parseAttempts < maxAttempts) {
+      try {
+        // Sanitize avant parsing
+        const sanitized = sanitizeJSON(currentContent);
+        extractedData = JSON.parse(sanitized);
+
+        if (parseAttempts > 0 && (process.env.NODE_ENV === "development" || options.debug)) {
+          console.log(`✅ [GEMINI] Parsing réussi à la tentative ${parseAttempts + 1}/${maxAttempts}`);
+        }
+
+        break; // Succès - sortir de la boucle
+      } catch (parseError) {
+        parseAttempts++;
+
+        if (process.env.NODE_ENV === "development" || options.debug) {
+          console.error(`❌ [GEMINI] Erreur parsing JSON (tentative ${parseAttempts}/${maxAttempts}):`, parseError);
+          console.error(`📄 [GEMINI] Contenu reçu (premiers 500 chars):`, currentContent.substring(0, 500));
+        }
+
+        if (parseAttempts >= maxAttempts) {
+          // Échec final après toutes les tentatives
+          return {
+            success: false,
+            error: {
+              type: "PARSING_ERROR",
+              message: `JSON parsing échoué après ${maxAttempts} tentative(s)`,
+              details: parseError,
+            },
+          };
+        }
+
+        // Retry avec prompt amendé demandant JSON strictement valide
+        console.warn(`⚠️ [GEMINI] Retry ${parseAttempts}/${maxAttempts - 1} avec instructions JSON strictes...`);
+
+        const retryResult = await model.generateContent([
+          {
+            text: `ERREUR: Le JSON précédent était invalide (${parseError instanceof Error ? parseError.message : "parsing error"}).
+
+CRITIQUE - RÉGÉNÉREZ EXACTEMENT LE MÊME SCHÉMA RFCV EN JSON VALIDE:
+
+RESPECTEZ STRICTEMENT:
+1. MÊME STRUCTURE que le prompt initial (document_metadata, parties, transport, etc.)
+2. ÉCHAPPEMENT OBLIGATOIRE:
+   - Échappez " avec \\" dans les valeurs de chaînes
+   - Échappez \\ avec \\\\ dans les chemins
+   - Échappez retours à la ligne avec \\n
+   - N'utilisez JAMAIS de guillemets simples '
+3. PAS de trailing commas après dernier élément
+4. PAS de commentaires
+5. Format: UN SEUL OBJET {}, PAS un array []
+
+Si les descriptions d'articles contiennent des caractères spéciaux (guillemets, apostrophes),
+échappez-les SYSTÉMATIQUEMENT ou remplacez-les par des espaces.
+
+Retournez UNIQUEMENT le JSON valide, rien d'autre:`,
+          },
+          {
+            inlineData: {
+              mimeType: "application/pdf",
+              data: base64PDF,
+            },
+          },
+        ]);
+
+        currentContent = retryResult.response.text();
+
+        if (process.env.NODE_ENV === "development" || options.debug) {
+          console.log(`🔄 [GEMINI] Nouvelle réponse reçue: ${(currentContent.length / 1024).toFixed(2)} KB`);
+        }
+      }
     }
 
     // 6. Logging de debug de la réponse brute
