@@ -45,20 +45,25 @@ export function getGeminiClient(): GoogleGenerativeAI {
  */
 export const GEMINI_MODELS = {
   /**
-   * Gemini 2.5 Flash - Recommandé pour extraction RFCV
+   * Gemini 2.0 Flash - Recommandé pour extraction RFCV
    * - Prix: $0.315/M input, $2.625/M output
    * - Vitesse: Très rapide (2-3s)
-   * - Performance: Très bonne pour documents structurés
+   * - Performance: Excellente pour documents structurés (71.4% succès)
+   * - Validé en production
+   *
+   * Note: Gemini 2.5 Flash testé mais régression significative (28.6% succès)
+   * Voir claudedocs/gemini-2.0-vs-2.5-comparison.md pour détails
    */
   FLASH: "gemini-2.0-flash-exp",
 
   /**
-   * Gemini 2.5 Pro - Pour cas complexes uniquement
+   * Gemini 2.5 Pro - Alternative pour cas complexes
    * - Prix: $1.3125/M input, $10.50/M output
-   * - Performance: Excellente
-   * - Utiliser si Flash insuffisant
+   * - Performance: À tester
+   * - Utiliser si Gemini 2.0 Flash insuffisant
+   * - Context: 2M tokens
    */
-  PRO: "gemini-2.0-exp",
+  PRO: "gemini-2.5-pro",
 } as const;
 
 /**
